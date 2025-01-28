@@ -1,14 +1,5 @@
-import torch
-import contextlib
-from comfy.clip_vision import clip_preprocess, Output
-import comfy.model_management
-from .sageAttention import (
-    sageattn_context,
-    save_attentions,
-    get_yaml_parameters,
-    orig_attentions,
-    sageattention
-)
+from .comfyui_sageattention import sageattn_context, get_yaml_parameters
+import comfy.ldm.modules.attention as comfyattn
 
 class BlehCLIPVisionSage:
     @classmethod
@@ -16,42 +7,34 @@ class BlehCLIPVisionSage:
         return {
             "required": {
                 "clip_vision": ("CLIP_VISION",),
-                "image": ("IMAGE",),
-                "crop": (["center", "none"], {"default": "center"}),
                 "enabled": ("BOOLEAN", {"default": True}),
             },
             "optional": {
                 "yaml_parameters": ("STRING", {
                     "multiline": True,
                     "default": "",
-                    "tooltip": "YAML formatted parameters for SageAttention"
+                    "tooltip": "YAML parameters for SageAttention (e.g., sageattn_allow_head_sizes: [72])"
                 }),
-            },
+            }
         }
-
-    RETURN_TYPES = ("CLIP_VISION_OUTPUT",)
-    FUNCTION = "encode"
+    
+    RETURN_TYPES = ("CLIP_VISION",)
+    FUNCTION = "patch"
     CATEGORY = "hacks"
 
-    def encode(self, clip_vision, image, crop, enabled, yaml_parameters=""):
-        if enabled and not sageattention:
-            raise RuntimeError("SageAttention required: pip install sageattention")
-
-        # Convert parameters
-        extra_params = get_yaml_parameters(yaml_parameters)
-        crop_bool = crop == "center"
-
-        # Ensure original attentions are preserved
-        if enabled and not orig_attentions:
-            orig_attentions.update(save_attentions())
-
-        # Apply SageAttention during encoding
-        with sageattn_context(
-            enabled=enabled,
-            orig_attentions=orig_attentions,
-            **extra_params
-        ):
-            output = clip_vision.encode_image(image, crop=crop_bool)
-
-        return (output,)
-
+    def patch(self, clip_vision, enabled, yaml_parameters=""):
+        if not enabled:
+            return (clip_vision,)
+        
+        sage_kwargs = get_yaml_parameters(yaml_parameters)
+        
+        original_encode = clip_vision.encode_image
+        
+        def patched_encode_image(self, image, crop=True):
+            with sageattn_context(enabled=True, **sage_kwargs):
+                return original_encode(image, crop=crop)
+        
+        # Bind the patched method to the instance
+        clip_vision.encode_image = patched_encode_image.__get__(clip_vision, type(clip_vision))
+        
+        return (clip_vision,)
