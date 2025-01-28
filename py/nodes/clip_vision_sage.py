@@ -1,4 +1,4 @@
-from .comfyui_sageattention import sageattn_context, get_yaml_parameters
+from .sageAttention import sageattn_context, get_yaml_parameters
 import comfy.ldm.modules.attention as comfyattn
 
 class BlehCLIPVisionSage:
