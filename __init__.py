@@ -17,6 +17,7 @@ from .py.nodes import (
     refinerAfter,
     sageAttention,
     samplers,
+    clip_vision_sage,
 )
 
 samplers.add_sampler_presets()
@@ -41,11 +42,13 @@ NODE_CLASS_MAPPINGS = {
     "BlehSetSamplerPreset": samplers.BlehSetSamplerPreset,
     "BlehCast": misc.BlehCast,
     "BlehSetSigmas": misc.BlehSetSigmas,
+    "BlehCLIPVisionSage": clip_vision_sage.BlehCLIPVisionSage,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "BlehHyperTile": "HyperTile (bleh)",
     "BlehDeepShrink": "Kohya Deep Shrink (bleh)",
+    "BlehCLIPVisionSage": "CLIP Vision Encode (bleh)",
 }
 
 __all__ = ("BLEH_VERSION", "NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS")
